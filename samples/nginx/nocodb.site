@@ -1,0 +1,35 @@
+# websocket upstream config
+upstream nocodb_ws {
+  server INSERT_YOUR_ENDPOINT_HERE;
+}
+
+server {
+  server_name nocodb.example.com;
+
+  # Allow special characters in headers
+  ignore_invalid_headers off;
+  # Disable buffering
+  proxy_buffering off;
+  proxy_request_buffering off;
+  chunked_transfer_encoding off;
+
+  location / {
+    proxy_pass http://nocodb_ws;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    chunked_transfer_encoding off;
+
+    # Websocket support
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_connect_timeout 180;
+    proxy_read_timeout 180;
+    proxy_send_timeout 180;
+  }
+
+}
+
+# THIS FILE DOES NOT CONTAIN ANY TLS CONFIGURATION - I USE CERTBOT TO GENERATE THIS CONFIG AUTOMATICALLY
