@@ -1,0 +1,22 @@
+{
+  // dossiers de travail
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "settings": {
+    // terminal
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    // format
+    "editor.formatOnType": false,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "files.autoSave": "onFocusChange",
+    // files associations
+    "files.associations": {
+      "*.json": "jsonc",
+    },
+  },
+}

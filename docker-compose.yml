@@ -1,0 +1,86 @@
+services:
+  nocodb:
+    image: nocodb/nocodb:latest
+    env_file: ./docker.env
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    restart: unless-stopped
+    volumes:
+      - ./data/nocodb:/usr/app/data
+    ports:
+      - "80:8080"
+    networks:
+      - nocodb-network
+
+  postgres:
+    image: postgres:16.6
+    env_file: ./docker.env
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nocodb-network
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    env_file: ./docker.env
+    command: ["sh", "-c", "redis-server --requirepass \"$${REDIS_PASSWORD}\""]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --raw incr ping"]
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - nocodb-network
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    env_file: ./docker.env
+    volumes:
+      - ./data/minio:/data # Correct volume mount for MinIO
+      - ./scripts/minio/entrypoint.sh:/usr/local/bin/entrypoint.sh
+    ports:
+      - "9000:9000" # MinIO API
+      - "9001:9001" # MinIO Console
+    command: ["sh", "-c", "server /data --console-address ':9001'"]
+    entrypoint: ["sh", "-c", "/usr/bin/docker-entrypoint.sh server /data --console-address ':9001' & /usr/local/bin/entrypoint.sh && fg"]
+    networks:
+      - nocodb-network
+
+  watchtower:
+    image: containrrr/watchtower
+    env_file: ./docker.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["--cleanup"]
+    restart: unless-stopped
+    networks:
+      - nocodb-network
+
+  postgres-dumps:
+    image: alpine:latest
+    depends_on:
+      - postgres
+    volumes:
+      - ./docker.env:/usr/local/bin/docker.env  # Environment variables are mounted here to be sourced by the scripts
+      - ./data/postgres-dumps:/postgres-dumps
+      - ./scripts/postgres-dumps/entrypoint.sh:/usr/local/bin/entrypoint.sh
+      - ./scripts/postgres-dumps/dump.sh:/usr/local/bin/dump.sh
+    entrypoint: ["sh", "/usr/local/bin/entrypoint.sh"]
+    networks:
+      - nocodb-network
+
+volumes:
+  redis:
+
+networks:
+  nocodb-network:
+    driver: bridge
